@@ -79,10 +79,67 @@ cd cd0157-Server-Deployment-and-Containerization/
 Completing the project involves several steps:
 
 1. Write a Dockerfile for a simple Flask API
+
+
 2. Build and test the container locally
+    ```bash
+    # Build image
+    docker build -t myimage .
+    
+    # Check the list of images
+    docker image ls
+    
+    # Remove any image
+    docker image rm myimage
+    
+    # Docker run container
+    docker run --name myContainer --env-file=.env_file -p 80:8080 myimage
+    
+    # Call the endpoint using curl command
+    curl -X GET "http://localhost:80/"
+    curl -X GET "http://localhost:8080/"
+    
+    # Calls the endpoint 'localhost:80/auth' with the email/password as the message body. 
+    # The return JWT token assigned to the environment variable 'TOKEN' 
+    curl -X POST -H "Content-Type: application/json" -d "{\"email\":\"kl5429@att.com\",\"password\":\"test\"}" "http://localhost:80/auth" | jq .token
+    set TOKEN=<copy and paste the outcome of above command>
+    echo %TOKEN%
+    
+    # Decrypt the token and returns its content
+    curl -X GET -H "Authorization: Bearer %TOKEN%" "http://localhost:80/contents"  | jq .
+    ```bash
 3. Create an EKS cluster
-4. Store a secret using AWS Parameter Store
-5. Create a CodePipeline pipeline triggered by GitHub checkins
-6. Create a CodeBuild stage which will build, test, and deploy your code
+   ```bash
+    # Verify the kubectl version and it should match in the below command
+    kubectl version
+
+   # Create EKS Cluster in us-east-2 region
+   eksctl create cluster --name simple-jwt-api --nodes=2 --version=1.29 --instance-types=t2.medium --region=us-east-2
+   
+   # Verify the worker nodes
+   kubectl get nodes
+
+   # Once review is done then delete the EKS Cluster
+   eksctl delete cluster simple-jwt-api  --region=us-east-2
+    
+   # Get the AWS account id of caller
+   aws sts get-caller-identity --query Account --output text
+
+    # Create a new IAM role named UdacityFlaskDeployCBKubectlRole, Make sure the account id should be updated in the trust.json file.
+    aws iam create-role --role-name UdacityFlaskDeployCBKubectlRole --assume-role-policy-document file://trust.json --output text --query 'Role.Arn'
+
+   # Attach a policy to the IAM role as detailed in iam-role-policy.json
+   aws iam put-role-policy --role-name UdacityFlaskDeployCBKubectlRole --policy-name eks-describe --policy-document file://iam-role-policy.json
+
+   # Get a copy of aws-auth config copy
+   kubectl get -n kube-system configmap/aws-auth -o yaml > ./tmp/aws-auth-patch.yml
+
+   # Run the patch of aws-auth amendment while adding 3 lines as described.
+   kubectl patch configmap/aws-auth -n kube-system --patch "$(cat aws-auth-patch.yml)"
+
+   ```bash
+5. Store a secret using AWS Parameter Store
+6. Create a CodePipeline pipeline triggered by GitHub checkins
+7. Create a CodeBuild stage which will build, test, and deploy your code
 
 For more detail about each of these steps, see the project lesson.
