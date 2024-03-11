@@ -120,7 +120,6 @@ Resources:
           import json
           import boto3
           from botocore.vendored import requests
-          import cfnresponse
           def handler(event, context):
             response = {
               'Status': 'SUCCESS',
@@ -131,9 +130,6 @@ Resources:
               'LogicalResourceId': event['LogicalResourceId'],
               'Data': {"Message": "Resource creation successful!"},
             }
-
-            cfnresponse.send(event, context, cfnresponse.SUCCESS, response, context.log_stream_name)
-
 
             client = boto3.client('iam')
             try:
